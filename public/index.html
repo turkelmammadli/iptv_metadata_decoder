@@ -56,17 +56,49 @@
             
             <div id="content-tab" class="tab-pane">
               <div id="content-container" class="content-data">
-                <div class="content-section" id="live-channels">
-                  <h3><i class="fas fa-tv"></i> Live TV Channels</h3>
-                  <div class="content-items"></div>
+                <div class="content-nav">
+                  <button class="content-nav-btn active" data-content="live"><i class="fas fa-tv"></i> Live TV Channels</button>
+                  <button class="content-nav-btn" data-content="vod"><i class="fas fa-film"></i> Movies (VOD)</button>
+                  <button class="content-nav-btn" data-content="series"><i class="fas fa-video"></i> TV Series</button>
                 </div>
-                <div class="content-section" id="movies">
-                  <h3><i class="fas fa-film"></i> Movies (VOD)</h3>
-                  <div class="content-items"></div>
+                
+                <div class="content-section active" id="live-content">
+                  <div class="category-container" id="live-categories">
+                    <h3>Categories</h3>
+                    <div class="category-loading"><i class="fas fa-spinner fa-spin"></i> Loading categories...</div>
+                    <div class="category-list"></div>
+                  </div>
+                  <div class="streams-container" id="live-streams">
+                    <h3>Channels</h3>
+                    <div class="streams-message">Select a category to view channels</div>
+                    <div class="content-items"></div>
+                  </div>
                 </div>
-                <div class="content-section" id="series">
-                  <h3><i class="fas fa-video"></i> TV Series</h3>
-                  <div class="content-items"></div>
+                
+                <div class="content-section" id="vod-content">
+                  <div class="category-container" id="vod-categories">
+                    <h3>Categories</h3>
+                    <div class="category-loading"><i class="fas fa-spinner fa-spin"></i> Loading categories...</div>
+                    <div class="category-list"></div>
+                  </div>
+                  <div class="streams-container" id="vod-streams">
+                    <h3>Movies</h3>
+                    <div class="streams-message">Select a category to view movies</div>
+                    <div class="content-items"></div>
+                  </div>
+                </div>
+                
+                <div class="content-section" id="series-content">
+                  <div class="category-container" id="series-categories">
+                    <h3>Categories</h3>
+                    <div class="category-loading"><i class="fas fa-spinner fa-spin"></i> Loading categories...</div>
+                    <div class="category-list"></div>
+                  </div>
+                  <div class="streams-container" id="series-streams">
+                    <h3>Series</h3>
+                    <div class="streams-message">Select a category to view series</div>
+                    <div class="content-items"></div>
+                  </div>
                 </div>
               </div>
             </div>

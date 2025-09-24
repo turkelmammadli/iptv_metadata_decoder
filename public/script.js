@@ -1,17 +1,36 @@
 document.addEventListener('DOMContentLoaded', () => {
+  // Main UI elements
   const form = document.getElementById('decoder-form');
   const decodeBtn = document.getElementById('decode-btn');
   const btnText = decodeBtn.querySelector('.btn-text');
   const spinner = decodeBtn.querySelector('.spinner');
   const results = document.getElementById('results');
   const resultContainer = document.getElementById('result-container');
-  const contentContainer = document.getElementById('content-container');
-  const liveChannelsContainer = document.querySelector('#live-channels .content-items');
-  const moviesContainer = document.querySelector('#movies .content-items');
-  const seriesContainer = document.querySelector('#series .content-items');
   const errorMessage = document.getElementById('error-message');
+  
+  // Tab navigation
   const tabButtons = document.querySelectorAll('.tab-btn');
   const tabPanes = document.querySelectorAll('.tab-pane');
+  
+  // Content navigation
+  const contentNavButtons = document.querySelectorAll('.content-nav-btn');
+  const contentSections = document.querySelectorAll('.content-section');
+  
+  // Category and stream containers
+  const liveCategoriesList = document.querySelector('#live-categories .category-list');
+  const liveStreamsContainer = document.querySelector('#live-streams .content-items');
+  const liveStreamsMessage = document.querySelector('#live-streams .streams-message');
+  
+  const vodCategoriesList = document.querySelector('#vod-categories .category-list');
+  const vodStreamsContainer = document.querySelector('#vod-streams .content-items');
+  const vodStreamsMessage = document.querySelector('#vod-streams .streams-message');
+  
+  const seriesCategoriesList = document.querySelector('#series-categories .category-list');
+  const seriesStreamsContainer = document.querySelector('#series-streams .content-items');
+  const seriesStreamsMessage = document.querySelector('#series-streams .streams-message');
+  
+  // Store credentials for reuse
+  let currentCredentials = null;
   
   // Tab switching functionality
   tabButtons.forEach(button => {
@@ -25,6 +44,21 @@ document.addEventListener('DOMContentLoaded', () => {
       // Update active tab pane
       tabPanes.forEach(pane => pane.classList.remove('active'));
       document.getElementById(`${tabId}-tab`).classList.add('active');
+    });
+  });
+  
+  // Content navigation functionality
+  contentNavButtons.forEach(button => {
+    button.addEventListener('click', () => {
+      const contentId = button.getAttribute('data-content');
+      
+      // Update active content button
+      contentNavButtons.forEach(btn => btn.classList.remove('active'));
+      button.classList.add('active');
+      
+      // Update active content section
+      contentSections.forEach(section => section.classList.remove('active'));
+      document.getElementById(`${contentId}-content`).classList.add('active');
     });
   });
 
@@ -61,6 +95,13 @@ document.addEventListener('DOMContentLoaded', () => {
       const data = await response.json();
       
       if (data.success && data.data) {
+        // Store credentials for reuse
+        currentCredentials = {
+          url: url,
+          username: username,
+          password: password
+        };
+        
         // Display formatted account results
         displayResults(data.data, data.isAuthenticated);
         
@@ -84,77 +125,182 @@ document.addEventListener('DOMContentLoaded', () => {
   });
   
   function displayIPTVContent(contentData, isAuthenticated) {
-    // Clear previous content
-    liveChannelsContainer.innerHTML = '';
-    moviesContainer.innerHTML = '';
-    seriesContainer.innerHTML = '';
-    
-    // Handle authentication failure
-    if (isAuthenticated === false) {
+    // Store credentials for later use
+    if (currentCredentials) {
+      // Display categories for each content type
+      displayCategories('live', contentData.liveCategories, liveCategoriesList);
+      displayCategories('vod', contentData.vodCategories, vodCategoriesList);
+      displayCategories('series', contentData.seriesCategories, seriesCategoriesList);
+    } else {
+      // Handle authentication failure
       const authMessage = '<div class="content-error"><i class="fas fa-exclamation-triangle"></i> Authentication failed. Cannot load content.</div>';
-      liveChannelsContainer.innerHTML = authMessage;
-      moviesContainer.innerHTML = authMessage;
-      seriesContainer.innerHTML = authMessage;
-      return;
-    }
-    
-    // Show loading indicators
-    liveChannelsContainer.innerHTML = '<div class="content-loading"><i class="fas fa-spinner fa-spin"></i> Loading channels...</div>';
-    moviesContainer.innerHTML = '<div class="content-loading"><i class="fas fa-spinner fa-spin"></i> Loading movies...</div>';
-    seriesContainer.innerHTML = '<div class="content-loading"><i class="fas fa-spinner fa-spin"></i> Loading series...</div>';
-    
-    // Process and display live channels
-    if (contentData.liveStreams && contentData.liveStreams.length > 0) {
-      liveChannelsContainer.innerHTML = '';
-      contentData.liveStreams.forEach(channel => {
-        const channelItem = createContentItem({
-          title: channel.name,
-          icon: channel.stream_icon || null,
-          type: 'channel',
-          meta: channel.category_name || ''
-        });
-        liveChannelsContainer.appendChild(channelItem);
-      });
-    } else {
-      liveChannelsContainer.innerHTML = '<div class="content-error">No live channels available</div>';
-    }
-    
-    // Process and display movies
-    if (contentData.vodStreams && contentData.vodStreams.length > 0) {
-      moviesContainer.innerHTML = '';
-      contentData.vodStreams.forEach(movie => {
-        const movieItem = createContentItem({
-          title: movie.name,
-          icon: movie.stream_icon || null,
-          type: 'movie',
-          meta: movie.added || ''
-        });
-        moviesContainer.appendChild(movieItem);
-      });
-    } else {
-      moviesContainer.innerHTML = '<div class="content-error">No movies available</div>';
-    }
-    
-    // Process and display series
-    if (contentData.series && contentData.series.length > 0) {
-      seriesContainer.innerHTML = '';
-      contentData.series.forEach(series => {
-        const seriesItem = createContentItem({
-          title: series.name,
-          icon: series.cover || null,
-          type: 'series',
-          meta: series.genre || ''
-        });
-        seriesContainer.appendChild(seriesItem);
-      });
-    } else {
-      seriesContainer.innerHTML = '<div class="content-error">No series available</div>';
+      liveCategoriesList.innerHTML = authMessage;
+      vodCategoriesList.innerHTML = authMessage;
+      seriesCategoriesList.innerHTML = authMessage;
+      
+      liveStreamsMessage.textContent = 'Authentication failed';
+      vodStreamsMessage.textContent = 'Authentication failed';
+      seriesStreamsMessage.textContent = 'Authentication failed';
     }
   }
   
-  function createContentItem({ title, icon, type, meta }) {
+  function displayCategories(type, categories, containerElement) {
+    // Clear previous content
+    containerElement.innerHTML = '';
+    
+    if (!categories || categories.length === 0) {
+      containerElement.innerHTML = '<div class="content-error">No categories available</div>';
+      return;
+    }
+    
+    // Sort categories by category_name
+    const sortedCategories = [...categories].sort((a, b) => {
+      return a.category_name.localeCompare(b.category_name);
+    });
+    
+    // Create category items
+    sortedCategories.forEach(category => {
+      const categoryItem = document.createElement('div');
+      categoryItem.className = 'category-item';
+      categoryItem.textContent = category.category_name;
+      categoryItem.dataset.categoryId = category.category_id;
+      categoryItem.dataset.type = type;
+      
+      // Add click event to load streams
+      categoryItem.addEventListener('click', handleCategoryClick);
+      
+      containerElement.appendChild(categoryItem);
+    });
+  }
+  
+  function handleCategoryClick(event) {
+    if (!currentCredentials) return;
+    
+    const categoryItem = event.currentTarget;
+    const categoryId = categoryItem.dataset.categoryId;
+    const type = categoryItem.dataset.type;
+    
+    // Update active category
+    const categoryContainer = categoryItem.closest('.category-container');
+    const allCategoryItems = categoryContainer.querySelectorAll('.category-item');
+    allCategoryItems.forEach(item => item.classList.remove('active'));
+    categoryItem.classList.add('active');
+    
+    // Determine which containers to update
+    let streamsContainer, streamsMessage;
+    switch (type) {
+      case 'live':
+        streamsContainer = liveStreamsContainer;
+        streamsMessage = liveStreamsMessage;
+        break;
+      case 'vod':
+        streamsContainer = vodStreamsContainer;
+        streamsMessage = vodStreamsMessage;
+        break;
+      case 'series':
+        streamsContainer = seriesStreamsContainer;
+        streamsMessage = seriesStreamsMessage;
+        break;
+    }
+    
+    // Show loading message
+    streamsMessage.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Loading content...';
+    streamsMessage.style.display = 'block';
+    streamsContainer.innerHTML = '';
+    
+    // Fetch streams for the selected category
+    fetchStreamsByCategory(type, categoryId, streamsContainer, streamsMessage);
+  }
+  
+  function fetchStreamsByCategory(type, categoryId, streamsContainer, streamsMessage) {
+    const { url, username, password } = currentCredentials;
+    
+    fetch('/api/streams', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ url, username, password, type, categoryId })
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success && data.data && data.data.length > 0) {
+        // Hide message
+        streamsMessage.style.display = 'none';
+        
+        // Display streams
+        displayStreams(type, data.data, streamsContainer);
+      } else {
+        // Show no content message
+        streamsMessage.textContent = 'No content available in this category';
+        streamsMessage.style.display = 'block';
+        streamsContainer.innerHTML = '';
+      }
+    })
+    .catch(error => {
+      console.error('Error fetching streams:', error);
+      streamsMessage.textContent = 'Error loading content';
+      streamsMessage.style.display = 'block';
+      streamsContainer.innerHTML = '';
+    });
+  }
+  
+  function displayStreams(type, streams, containerElement) {
+    // Clear previous content
+    containerElement.innerHTML = '';
+    
+    // Create stream items
+    streams.forEach(stream => {
+      let title, icon, meta;
+      
+      switch (type) {
+        case 'live':
+          title = stream.name;
+          icon = stream.stream_icon;
+          meta = stream.category_name || '';
+          break;
+        case 'vod':
+          title = stream.name;
+          icon = stream.stream_icon;
+          meta = stream.added || '';
+          break;
+        case 'series':
+          title = stream.name;
+          icon = stream.cover;
+          meta = stream.genre || '';
+          break;
+      }
+      
+      const streamItem = createContentItem({
+        title,
+        icon,
+        type,
+        meta,
+        url: stream.stream_url,
+        id: stream.stream_id || stream.series_id
+      });
+      
+      containerElement.appendChild(streamItem);
+    });
+  }
+  
+  function createContentItem({ title, icon, type, meta, url, id }) {
     const item = document.createElement('div');
     item.className = 'content-item';
+    
+    // Make the item clickable if it has a URL
+    if (url) {
+      item.classList.add('clickable');
+      item.addEventListener('click', () => {
+        if (type === 'series') {
+          // For series, we need to fetch episodes
+          showSeriesEpisodes(id);
+        } else {
+          // For live and VOD, we can open the stream directly
+          window.open(url, '_blank');
+        }
+      });
+    }
     
     const imageContainer = document.createElement('div');
     imageContainer.className = 'item-image';
@@ -168,8 +314,8 @@ document.addEventListener('DOMContentLoaded', () => {
         this.remove();
         // Add icon based on content type
         const iconEl = document.createElement('i');
-        if (type === 'channel') iconEl.className = 'fas fa-tv';
-        else if (type === 'movie') iconEl.className = 'fas fa-film';
+        if (type === 'live') iconEl.className = 'fas fa-tv';
+        else if (type === 'vod') iconEl.className = 'fas fa-film';
         else if (type === 'series') iconEl.className = 'fas fa-video';
         imageContainer.appendChild(iconEl);
       };
@@ -177,8 +323,8 @@ document.addEventListener('DOMContentLoaded', () => {
     } else {
       // Add icon based on content type
       const iconEl = document.createElement('i');
-      if (type === 'channel') iconEl.className = 'fas fa-tv';
-      else if (type === 'movie') iconEl.className = 'fas fa-film';
+      if (type === 'live') iconEl.className = 'fas fa-tv';
+      else if (type === 'vod') iconEl.className = 'fas fa-film';
       else if (type === 'series') iconEl.className = 'fas fa-video';
       imageContainer.appendChild(iconEl);
     }
@@ -201,6 +347,13 @@ document.addEventListener('DOMContentLoaded', () => {
     item.appendChild(infoContainer);
     
     return item;
+  }
+  
+  function showSeriesEpisodes(seriesId) {
+    // This would be implemented to show a modal with episodes
+    // For now, we'll just log it
+    console.log('Show episodes for series ID:', seriesId);
+    alert('Series episodes feature coming soon!');
   }
   
   function displayResults(data, isAuthenticated) {

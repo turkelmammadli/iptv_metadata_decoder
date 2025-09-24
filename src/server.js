@@ -230,6 +230,149 @@ app.post('/api/decode', async (req, res) => {
   }
 });
 
+// Route to get streams by category
+app.post('/api/streams', async (req, res) => {
+  try {
+    const { url, username, password, type, categoryId } = req.body;
+    
+    if (!url || !username || !password || !type || !categoryId) {
+      return res.status(400).json({ error: 'URL, username, password, type, and categoryId are required' });
+    }
+
+    // Parse the URL to ensure it's properly formatted
+    let baseUrl = url;
+    if (!baseUrl.startsWith('http://') && !baseUrl.startsWith('https://')) {
+      baseUrl = 'http://' + baseUrl;
+    }
+    
+    // Remove trailing slash if present
+    baseUrl = baseUrl.replace(/\/$/, '');
+
+    let action;
+    let endpoint;
+    
+    // Determine the action based on the type
+    switch (type) {
+      case 'live':
+        action = 'get_live_streams';
+        endpoint = 'live';
+        break;
+      case 'vod':
+        action = 'get_vod_streams';
+        endpoint = 'movie';
+        break;
+      case 'series':
+        action = 'get_series';
+        endpoint = 'series';
+        break;
+      default:
+        return res.status(400).json({ error: 'Invalid type' });
+    }
+
+    // Make request to get streams by category
+    const apiUrl = `${baseUrl}/player_api.php?username=${username}&password=${password}&action=${action}&category_id=${categoryId}`;
+    console.log('Making request to:', apiUrl);
+    const response = await axios.get(apiUrl, { timeout: 10000 });
+    
+    // Check if we got a valid response
+    if (Array.isArray(response.data)) {
+      // Add stream URLs to each item
+      const streams = response.data.map(item => {
+        // For live and VOD, we need to add the stream URL
+        if (type === 'live' || type === 'vod') {
+          const streamId = item.stream_id;
+          item.stream_url = `${baseUrl}/${endpoint}/${username}/${password}/${streamId}.ts`;
+        }
+        // For series, we would need to handle episodes separately
+        return item;
+      });
+      
+      return res.json({
+        success: true,
+        data: streams
+      });
+    } else if (response.data && response.data.user_info && response.data.user_info.auth === 0) {
+      return res.status(401).json({
+        success: false,
+        error: 'Authentication failed',
+        data: response.data
+      });
+    } else {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid response format',
+        data: response.data
+      });
+    }
+  } catch (error) {
+    console.error('Error fetching streams:', error.message);
+    return res.status(500).json({
+      success: false,
+      error: 'Failed to fetch streams. Please check your inputs and try again.'
+    });
+  }
+});
+
+// Route to get series episodes
+app.post('/api/episodes', async (req, res) => {
+  try {
+    const { url, username, password, seriesId } = req.body;
+    
+    if (!url || !username || !password || !seriesId) {
+      return res.status(400).json({ error: 'URL, username, password, and seriesId are required' });
+    }
+
+    // Parse the URL to ensure it's properly formatted
+    let baseUrl = url;
+    if (!baseUrl.startsWith('http://') && !baseUrl.startsWith('https://')) {
+      baseUrl = 'http://' + baseUrl;
+    }
+    
+    // Remove trailing slash if present
+    baseUrl = baseUrl.replace(/\/$/, '');
+
+    // Make request to get episodes
+    const apiUrl = `${baseUrl}/player_api.php?username=${username}&password=${password}&action=get_series_info&series_id=${seriesId}`;
+    console.log('Making request to:', apiUrl);
+    const response = await axios.get(apiUrl, { timeout: 10000 });
+    
+    if (response.data && response.data.episodes) {
+      // Add stream URLs to each episode
+      const episodes = response.data.episodes;
+      Object.keys(episodes).forEach(seasonKey => {
+        episodes[seasonKey].forEach(episode => {
+          const episodeId = episode.id;
+          episode.stream_url = `${baseUrl}/series/${username}/${password}/${episodeId}.ts`;
+        });
+      });
+      
+      return res.json({
+        success: true,
+        info: response.data.info || {},
+        episodes: episodes
+      });
+    } else if (response.data && response.data.user_info && response.data.user_info.auth === 0) {
+      return res.status(401).json({
+        success: false,
+        error: 'Authentication failed',
+        data: response.data
+      });
+    } else {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid response format',
+        data: response.data
+      });
+    }
+  } catch (error) {
+    console.error('Error fetching episodes:', error.message);
+    return res.status(500).json({
+      success: false,
+      error: 'Failed to fetch episodes. Please check your inputs and try again.'
+    });
+  }
+});
+
 // Start the server
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
