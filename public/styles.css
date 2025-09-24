@@ -165,12 +165,14 @@ button:hover {
   display: flex;
   border-bottom: 1px solid #ddd;
   margin-bottom: 20px;
+  flex-wrap: wrap;
+  overflow-x: auto;
 }
 
 .tab-btn {
   background: none;
   border: none;
-  padding: 10px 20px;
+  padding: 10px 15px;
   cursor: pointer;
   font-size: 14px;
   font-weight: 600;
@@ -178,6 +180,10 @@ button:hover {
   border-bottom: 2px solid transparent;
   transition: all 0.3s;
   width: auto;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 5px;
 }
 
 .tab-btn:hover {
@@ -246,10 +252,10 @@ button:hover {
   margin-bottom: 30px;
 }
 
-.content-section.active {
+.content-layout {
   display: flex;
   gap: 20px;
-  height: calc(100% - 50px);
+  height: 100%;
 }
 
 .content-section h3 {
@@ -505,7 +511,7 @@ footer {
     padding: 6px 12px;
   }
   
-  .content-section.active {
+  .content-layout {
     flex-direction: column;
   }
   

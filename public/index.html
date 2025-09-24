@@ -46,7 +46,9 @@
           
           <div class="tabs">
             <button class="tab-btn active" data-tab="formatted">Account Info</button>
-            <button class="tab-btn" data-tab="content">IPTV Content</button>
+            <button class="tab-btn" data-tab="live"><i class="fas fa-tv"></i> Live TV</button>
+            <button class="tab-btn" data-tab="vod"><i class="fas fa-film"></i> Movies</button>
+            <button class="tab-btn" data-tab="series"><i class="fas fa-video"></i> Series</button>
           </div>
           
           <div class="tab-content">
@@ -54,15 +56,10 @@
               <div id="result-container"></div>
             </div>
             
-            <div id="content-tab" class="tab-pane">
-              <div id="content-container" class="content-data">
-                <div class="content-nav">
-                  <button class="content-nav-btn active" data-content="live"><i class="fas fa-tv"></i> Live TV Channels</button>
-                  <button class="content-nav-btn" data-content="vod"><i class="fas fa-film"></i> Movies (VOD)</button>
-                  <button class="content-nav-btn" data-content="series"><i class="fas fa-video"></i> TV Series</button>
-                </div>
+            <div id="live-tab" class="tab-pane">
+              <div class="content-data">
                 
-                <div class="content-section active" id="live-content">
+                <div class="content-layout">
                   <div class="category-container" id="live-categories">
                     <h3>Categories</h3>
                     <div class="category-loading"><i class="fas fa-spinner fa-spin"></i> Loading categories...</div>
@@ -74,8 +71,12 @@
                     <div class="content-items"></div>
                   </div>
                 </div>
-                
-                <div class="content-section" id="vod-content">
+              </div>
+            </div>
+            
+            <div id="vod-tab" class="tab-pane">
+              <div class="content-data">
+                <div class="content-layout">
                   <div class="category-container" id="vod-categories">
                     <h3>Categories</h3>
                     <div class="category-loading"><i class="fas fa-spinner fa-spin"></i> Loading categories...</div>
@@ -87,8 +88,12 @@
                     <div class="content-items"></div>
                   </div>
                 </div>
-                
-                <div class="content-section" id="series-content">
+              </div>
+            </div>
+            
+            <div id="series-tab" class="tab-pane">
+              <div class="content-data">
+                <div class="content-layout">
                   <div class="category-container" id="series-categories">
                     <h3>Categories</h3>
                     <div class="category-loading"><i class="fas fa-spinner fa-spin"></i> Loading categories...</div>

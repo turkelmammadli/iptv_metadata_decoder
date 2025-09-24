@@ -12,10 +12,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const tabButtons = document.querySelectorAll('.tab-btn');
   const tabPanes = document.querySelectorAll('.tab-pane');
   
-  // Content navigation
-  const contentNavButtons = document.querySelectorAll('.content-nav-btn');
-  const contentSections = document.querySelectorAll('.content-section');
-  
   // Category and stream containers
   const liveCategoriesList = document.querySelector('#live-categories .category-list');
   const liveStreamsContainer = document.querySelector('#live-streams .content-items');
@@ -47,20 +43,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
   
-  // Content navigation functionality
-  contentNavButtons.forEach(button => {
-    button.addEventListener('click', () => {
-      const contentId = button.getAttribute('data-content');
-      
-      // Update active content button
-      contentNavButtons.forEach(btn => btn.classList.remove('active'));
-      button.classList.add('active');
-      
-      // Update active content section
-      contentSections.forEach(section => section.classList.remove('active'));
-      document.getElementById(`${contentId}-content`).classList.add('active');
-    });
-  });
+  // We no longer need content navigation as it's now part of the main tabs
 
   // Add back button to the results container
   const backButton = document.createElement('button');
@@ -147,6 +130,17 @@ document.addEventListener('DOMContentLoaded', () => {
       displayCategories('live', contentData.liveCategories, liveCategoriesList);
       displayCategories('vod', contentData.vodCategories, vodCategoriesList);
       displayCategories('series', contentData.seriesCategories, seriesCategoriesList);
+      
+      // Show the second tab (Live TV) after loading content
+      if (contentData.liveCategories && contentData.liveCategories.length > 0) {
+        // Select the Live TV tab after a short delay to ensure content is loaded
+        setTimeout(() => {
+          const liveTab = document.querySelector('.tab-btn[data-tab="live"]');
+          if (liveTab && !liveTab.classList.contains('active')) {
+            liveTab.click();
+          }
+        }, 500);
+      }
     } else {
       // Handle authentication failure
       const authMessage = '<div class="content-error"><i class="fas fa-exclamation-triangle"></i> Authentication failed. Cannot load content.</div>';
