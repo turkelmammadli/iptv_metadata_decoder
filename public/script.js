@@ -6,6 +6,28 @@ document.addEventListener('DOMContentLoaded', () => {
   const results = document.getElementById('results');
   const resultContainer = document.getElementById('result-container');
   const errorMessage = document.getElementById('error-message');
+  const tabButtons = document.querySelectorAll('.tab-btn');
+  const tabPanes = document.querySelectorAll('.tab-pane');
+  
+  // Content containers
+  const liveChannelsList = document.getElementById('live-channels-list');
+  const vodList = document.getElementById('vod-list');
+  const seriesList = document.getElementById('series-list');
+  
+  // Tab switching functionality
+  tabButtons.forEach(button => {
+    button.addEventListener('click', () => {
+      const tabId = button.getAttribute('data-tab');
+      
+      // Update active tab button
+      tabButtons.forEach(btn => btn.classList.remove('active'));
+      button.classList.add('active');
+      
+      // Update active tab pane
+      tabPanes.forEach(pane => pane.classList.remove('active'));
+      document.getElementById(`${tabId}-tab`).classList.add('active');
+    });
+  });
 
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -40,7 +62,14 @@ document.addEventListener('DOMContentLoaded', () => {
       const data = await response.json();
       
       if (data.success && data.data) {
+        // Display formatted account results
         displayResults(data.data);
+        
+        // Display content data if available
+        if (data.contentData) {
+          displayContentData(data.contentData);
+        }
+        
         results.classList.remove('hidden');
       } else {
         showError(data.error || 'Failed to decode Xtream codes');
@@ -54,6 +83,97 @@ document.addEventListener('DOMContentLoaded', () => {
       spinner.classList.add('hidden');
     }
   });
+  
+  function displayContentData(contentData) {
+    // Display Live TV Channels
+    displayLiveChannels(contentData.liveCategories, contentData.sampleLiveStreams);
+    
+    // Display VOD (Movies)
+    displayVodCategories(contentData.vodCategories);
+    
+    // Display Series
+    displaySeriesCategories(contentData.seriesCategories);
+  }
+  
+  function displayLiveChannels(categories, streams) {
+    liveChannelsList.innerHTML = '';
+    
+    if (!categories || categories.length === 0) {
+      liveChannelsList.innerHTML = '<div class="content-empty">No live TV channels available</div>';
+      return;
+    }
+    
+    if (!streams || streams.length === 0) {
+      // Show categories only
+      categories.forEach(category => {
+        const categoryItem = document.createElement('div');
+        categoryItem.className = 'channel-item';
+        categoryItem.innerHTML = `
+          <div class="channel-name">${category.category_name}</div>
+          <div class="channel-category">Category ID: ${category.category_id}</div>
+        `;
+        liveChannelsList.appendChild(categoryItem);
+      });
+      return;
+    }
+    
+    // Show sample streams
+    streams.forEach(stream => {
+      const streamItem = document.createElement('div');
+      streamItem.className = 'channel-item';
+      
+      // Find category name
+      let categoryName = 'Unknown';
+      if (categories) {
+        const category = categories.find(c => c.category_id === stream.category_id);
+        if (category) categoryName = category.category_name;
+      }
+      
+      streamItem.innerHTML = `
+        <div class="channel-name">${stream.name}</div>
+        <div class="channel-category">${categoryName}</div>
+      `;
+      liveChannelsList.appendChild(streamItem);
+    });
+  }
+  
+  function displayVodCategories(categories) {
+    vodList.innerHTML = '';
+    
+    if (!categories || categories.length === 0) {
+      vodList.innerHTML = '<div class="content-empty">No VOD content available</div>';
+      return;
+    }
+    
+    categories.forEach(category => {
+      const categoryItem = document.createElement('div');
+      categoryItem.className = 'vod-item';
+      categoryItem.innerHTML = `
+        <div class="vod-name">${category.category_name}</div>
+        <div class="vod-category">Category ID: ${category.category_id}</div>
+      `;
+      vodList.appendChild(categoryItem);
+    });
+  }
+  
+  function displaySeriesCategories(categories) {
+    seriesList.innerHTML = '';
+    
+    if (!categories || categories.length === 0) {
+      seriesList.innerHTML = '<div class="content-empty">No series content available</div>';
+      return;
+    }
+    
+    categories.forEach(category => {
+      const categoryItem = document.createElement('div');
+      categoryItem.className = 'series-item';
+      categoryItem.innerHTML = `
+        <div class="series-name">${category.category_name}</div>
+        <div class="series-category">Category ID: ${category.category_id}</div>
+      `;
+      seriesList.appendChild(categoryItem);
+    });
+  }
   
   function displayResults(data) {
     resultContainer.innerHTML = '';
@@ -151,5 +271,17 @@ document.addEventListener('DOMContentLoaded', () => {
     errorMessage.classList.remove('hidden');
     results.classList.remove('hidden');
     resultContainer.innerHTML = '';
+    
+    // Clear content containers
+    liveChannelsList.innerHTML = '';
+    vodList.innerHTML = '';
+    seriesList.innerHTML = '';
+    
+    // Switch to formatted tab when showing an error
+    tabButtons.forEach(btn => btn.classList.remove('active'));
+    tabButtons[0].classList.add('active');
+    
+    tabPanes.forEach(pane => pane.classList.remove('active'));
+    tabPanes[0].classList.add('active');
   }
 });

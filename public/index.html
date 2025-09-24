@@ -43,7 +43,34 @@
         <div id="results" class="results-container hidden">
           <h2>Account Information</h2>
           <div id="error-message" class="error hidden"></div>
-          <div id="result-container"></div>
+          
+          <div class="tabs">
+            <button class="tab-btn active" data-tab="formatted">Account Info</button>
+            <button class="tab-btn" data-tab="content">Content</button>
+          </div>
+          
+          <div class="tab-content">
+            <div id="formatted-tab" class="tab-pane active">
+              <div id="result-container"></div>
+            </div>
+            
+            <div id="content-tab" class="tab-pane">
+              <div id="content-container" class="content-data">
+                <div class="content-section" id="live-channels-section">
+                  <h3>Live TV Channels</h3>
+                  <div id="live-channels-list" class="content-list"></div>
+                </div>
+                <div class="content-section" id="vod-section">
+                  <h3>Movies (VOD)</h3>
+                  <div id="vod-list" class="content-list"></div>
+                </div>
+                <div class="content-section" id="series-section">
+                  <h3>TV Series</h3>
+                  <div id="series-list" class="content-list"></div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>

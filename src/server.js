@@ -35,9 +35,50 @@ app.post('/api/decode', async (req, res) => {
     const response = await axios.get(apiUrl, { timeout: 10000 });
     
     if (response.data && response.data.user_info) {
+      // Get content data (categories and streams)
+      const contentData = {};
+      
+      try {
+        // Get live TV categories
+        const liveCategories = await axios.get(
+          `${baseUrl}/player_api.php?username=${username}&password=${password}&action=get_live_categories`,
+          { timeout: 10000 }
+        );
+        contentData.liveCategories = liveCategories.data;
+        
+        // Get VOD categories (movies)
+        const vodCategories = await axios.get(
+          `${baseUrl}/player_api.php?username=${username}&password=${password}&action=get_vod_categories`,
+          { timeout: 10000 }
+        );
+        contentData.vodCategories = vodCategories.data;
+        
+        // Get series categories
+        const seriesCategories = await axios.get(
+          `${baseUrl}/player_api.php?username=${username}&password=${password}&action=get_series_categories`,
+          { timeout: 10000 }
+        );
+        contentData.seriesCategories = seriesCategories.data;
+        
+        // Get sample channels from first live category if available
+        if (liveCategories.data && liveCategories.data.length > 0) {
+          const firstCategoryId = liveCategories.data[0].category_id;
+          const liveStreams = await axios.get(
+            `${baseUrl}/player_api.php?username=${username}&password=${password}&action=get_live_streams&category_id=${firstCategoryId}`,
+            { timeout: 10000 }
+          );
+          contentData.sampleLiveStreams = liveStreams.data.slice(0, 20); // Limit to 20 channels
+        }
+      } catch (contentError) {
+        console.error('Error fetching content data:', contentError.message);
+        // Continue even if content fetch fails
+        contentData.error = 'Some content data could not be loaded';
+      }
+      
       return res.json({
         success: true,
-        data: response.data.user_info
+        data: response.data.user_info,
+        contentData: contentData
       });
     } else {
       return res.status(400).json({ 
