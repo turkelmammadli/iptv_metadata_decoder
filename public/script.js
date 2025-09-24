@@ -62,6 +62,21 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
+  // Add back button to the results container
+  const backButton = document.createElement('button');
+  backButton.id = 'back-button';
+  backButton.innerHTML = '<i class="fas fa-arrow-left"></i> New Search';
+  backButton.addEventListener('click', () => {
+    // Show form and hide results
+    document.querySelector('.form-container').classList.remove('hidden');
+    results.classList.add('hidden');
+    backButton.classList.add('hidden');
+    // Reset form
+    form.reset();
+  });
+  results.insertBefore(backButton, results.firstChild);
+  backButton.classList.add('hidden');
+  
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
     
@@ -69,8 +84,6 @@ document.addEventListener('DOMContentLoaded', () => {
     btnText.textContent = 'Decoding...';
     spinner.classList.remove('hidden');
     errorMessage.classList.add('hidden');
-    
-    // Don't hide results container in side-by-side layout if it was already visible
     if (results.classList.contains('hidden')) {
       // First time - keep it hidden
     } else {
@@ -110,7 +123,10 @@ document.addEventListener('DOMContentLoaded', () => {
           displayIPTVContent(data.contentData, data.isAuthenticated);
         }
         
+        // Hide form and show results with back button
+        document.querySelector('.form-container').classList.add('hidden');
         results.classList.remove('hidden');
+        backButton.classList.remove('hidden');
       } else {
         showError(data.error || 'Failed to decode Xtream codes');
       }
