@@ -54,7 +54,7 @@ header p {
   padding: 20px;
   margin-bottom: 10px;
   height: calc(100vh - 120px);
-  overflow: hidden;
+  overflow: auto;
 }
 
 .main-content {
