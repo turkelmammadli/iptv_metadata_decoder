@@ -166,7 +166,7 @@ button:hover {
   border-bottom: 1px solid #ddd;
   margin-bottom: 20px;
   flex-wrap: wrap;
-  overflow-x: auto;
+  overflow-x: hidden;
 }
 
 .tab-btn {
@@ -212,7 +212,7 @@ button:hover {
 
 .content-data {
   height: 100%;
-  overflow-y: auto;
+  overflow-y: hidden;
   padding-right: 10px;
 }
 
@@ -220,7 +220,7 @@ button:hover {
   display: flex;
   border-bottom: 1px solid #ddd;
   margin-bottom: 20px;
-  overflow-x: auto;
+  overflow-x: hidden;
 }
 
 .content-nav-btn {
@@ -284,12 +284,12 @@ button:hover {
 
 .streams-container .content-items {
   flex: 1;
-  overflow-y: auto;
+  overflow-y: hidden;
 }
 
 .category-list {
   height: calc(100% - 50px);
-  overflow-y: auto;
+  overflow-y: hidden;
 }
 
 .category-item {
