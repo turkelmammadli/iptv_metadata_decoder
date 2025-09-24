@@ -5,14 +5,13 @@ document.addEventListener('DOMContentLoaded', () => {
   const spinner = decodeBtn.querySelector('.spinner');
   const results = document.getElementById('results');
   const resultContainer = document.getElementById('result-container');
+  const contentContainer = document.getElementById('content-container');
+  const liveChannelsContainer = document.querySelector('#live-channels .content-items');
+  const moviesContainer = document.querySelector('#movies .content-items');
+  const seriesContainer = document.querySelector('#series .content-items');
   const errorMessage = document.getElementById('error-message');
   const tabButtons = document.querySelectorAll('.tab-btn');
   const tabPanes = document.querySelectorAll('.tab-pane');
-  
-  // Content containers
-  const liveChannelsList = document.getElementById('live-channels-list');
-  const vodList = document.getElementById('vod-list');
-  const seriesList = document.getElementById('series-list');
   
   // Tab switching functionality
   tabButtons.forEach(button => {
@@ -63,11 +62,11 @@ document.addEventListener('DOMContentLoaded', () => {
       
       if (data.success && data.data) {
         // Display formatted account results
-        displayResults(data.data);
+        displayResults(data.data, data.isAuthenticated);
         
-        // Display content data if available
+        // Display IPTV content if available
         if (data.contentData) {
-          displayContentData(data.contentData);
+          displayIPTVContent(data.contentData, data.isAuthenticated);
         }
         
         results.classList.remove('hidden');
@@ -84,99 +83,144 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
   
-  function displayContentData(contentData) {
-    // Display Live TV Channels
-    displayLiveChannels(contentData.liveCategories, contentData.sampleLiveStreams);
+  function displayIPTVContent(contentData, isAuthenticated) {
+    // Clear previous content
+    liveChannelsContainer.innerHTML = '';
+    moviesContainer.innerHTML = '';
+    seriesContainer.innerHTML = '';
     
-    // Display VOD (Movies)
-    displayVodCategories(contentData.vodCategories);
-    
-    // Display Series
-    displaySeriesCategories(contentData.seriesCategories);
-  }
-  
-  function displayLiveChannels(categories, streams) {
-    liveChannelsList.innerHTML = '';
-    
-    if (!categories || categories.length === 0) {
-      liveChannelsList.innerHTML = '<div class="content-empty">No live TV channels available</div>';
+    // Handle authentication failure
+    if (isAuthenticated === false) {
+      const authMessage = '<div class="content-error"><i class="fas fa-exclamation-triangle"></i> Authentication failed. Cannot load content.</div>';
+      liveChannelsContainer.innerHTML = authMessage;
+      moviesContainer.innerHTML = authMessage;
+      seriesContainer.innerHTML = authMessage;
       return;
     }
     
-    if (!streams || streams.length === 0) {
-      // Show categories only
-      categories.forEach(category => {
-        const categoryItem = document.createElement('div');
-        categoryItem.className = 'channel-item';
-        categoryItem.innerHTML = `
-          <div class="channel-name">${category.category_name}</div>
-          <div class="channel-category">Category ID: ${category.category_id}</div>
-        `;
-        liveChannelsList.appendChild(categoryItem);
+    // Show loading indicators
+    liveChannelsContainer.innerHTML = '<div class="content-loading"><i class="fas fa-spinner fa-spin"></i> Loading channels...</div>';
+    moviesContainer.innerHTML = '<div class="content-loading"><i class="fas fa-spinner fa-spin"></i> Loading movies...</div>';
+    seriesContainer.innerHTML = '<div class="content-loading"><i class="fas fa-spinner fa-spin"></i> Loading series...</div>';
+    
+    // Process and display live channels
+    if (contentData.liveStreams && contentData.liveStreams.length > 0) {
+      liveChannelsContainer.innerHTML = '';
+      contentData.liveStreams.forEach(channel => {
+        const channelItem = createContentItem({
+          title: channel.name,
+          icon: channel.stream_icon || null,
+          type: 'channel',
+          meta: channel.category_name || ''
+        });
+        liveChannelsContainer.appendChild(channelItem);
       });
-      return;
+    } else {
+      liveChannelsContainer.innerHTML = '<div class="content-error">No live channels available</div>';
     }
     
-    // Show sample streams
-    streams.forEach(stream => {
-      const streamItem = document.createElement('div');
-      streamItem.className = 'channel-item';
-      
-      // Find category name
-      let categoryName = 'Unknown';
-      if (categories) {
-        const category = categories.find(c => c.category_id === stream.category_id);
-        if (category) categoryName = category.category_name;
-      }
-      
-      streamItem.innerHTML = `
-        <div class="channel-name">${stream.name}</div>
-        <div class="channel-category">${categoryName}</div>
-      `;
-      liveChannelsList.appendChild(streamItem);
-    });
-  }
-  
-  function displayVodCategories(categories) {
-    vodList.innerHTML = '';
-    
-    if (!categories || categories.length === 0) {
-      vodList.innerHTML = '<div class="content-empty">No VOD content available</div>';
-      return;
+    // Process and display movies
+    if (contentData.vodStreams && contentData.vodStreams.length > 0) {
+      moviesContainer.innerHTML = '';
+      contentData.vodStreams.forEach(movie => {
+        const movieItem = createContentItem({
+          title: movie.name,
+          icon: movie.stream_icon || null,
+          type: 'movie',
+          meta: movie.added || ''
+        });
+        moviesContainer.appendChild(movieItem);
+      });
+    } else {
+      moviesContainer.innerHTML = '<div class="content-error">No movies available</div>';
     }
     
-    categories.forEach(category => {
-      const categoryItem = document.createElement('div');
-      categoryItem.className = 'vod-item';
-      categoryItem.innerHTML = `
-        <div class="vod-name">${category.category_name}</div>
-        <div class="vod-category">Category ID: ${category.category_id}</div>
-      `;
-      vodList.appendChild(categoryItem);
-    });
+    // Process and display series
+    if (contentData.series && contentData.series.length > 0) {
+      seriesContainer.innerHTML = '';
+      contentData.series.forEach(series => {
+        const seriesItem = createContentItem({
+          title: series.name,
+          icon: series.cover || null,
+          type: 'series',
+          meta: series.genre || ''
+        });
+        seriesContainer.appendChild(seriesItem);
+      });
+    } else {
+      seriesContainer.innerHTML = '<div class="content-error">No series available</div>';
+    }
   }
   
-  function displaySeriesCategories(categories) {
-    seriesList.innerHTML = '';
+  function createContentItem({ title, icon, type, meta }) {
+    const item = document.createElement('div');
+    item.className = 'content-item';
     
-    if (!categories || categories.length === 0) {
-      seriesList.innerHTML = '<div class="content-empty">No series content available</div>';
-      return;
+    const imageContainer = document.createElement('div');
+    imageContainer.className = 'item-image';
+    
+    if (icon) {
+      const img = document.createElement('img');
+      img.src = icon;
+      img.alt = title;
+      img.onerror = function() {
+        this.onerror = null;
+        this.remove();
+        // Add icon based on content type
+        const iconEl = document.createElement('i');
+        if (type === 'channel') iconEl.className = 'fas fa-tv';
+        else if (type === 'movie') iconEl.className = 'fas fa-film';
+        else if (type === 'series') iconEl.className = 'fas fa-video';
+        imageContainer.appendChild(iconEl);
+      };
+      imageContainer.appendChild(img);
+    } else {
+      // Add icon based on content type
+      const iconEl = document.createElement('i');
+      if (type === 'channel') iconEl.className = 'fas fa-tv';
+      else if (type === 'movie') iconEl.className = 'fas fa-film';
+      else if (type === 'series') iconEl.className = 'fas fa-video';
+      imageContainer.appendChild(iconEl);
     }
     
-    categories.forEach(category => {
-      const categoryItem = document.createElement('div');
-      categoryItem.className = 'series-item';
-      categoryItem.innerHTML = `
-        <div class="series-name">${category.category_name}</div>
-        <div class="series-category">Category ID: ${category.category_id}</div>
-      `;
-      seriesList.appendChild(categoryItem);
-    });
+    const infoContainer = document.createElement('div');
+    infoContainer.className = 'item-info';
+    
+    const titleEl = document.createElement('div');
+    titleEl.className = 'item-title';
+    titleEl.textContent = title;
+    
+    const metaEl = document.createElement('div');
+    metaEl.className = 'item-meta';
+    metaEl.textContent = meta;
+    
+    infoContainer.appendChild(titleEl);
+    infoContainer.appendChild(metaEl);
+    
+    item.appendChild(imageContainer);
+    item.appendChild(infoContainer);
+    
+    return item;
   }
   
-  function displayResults(data) {
+  function displayResults(data, isAuthenticated) {
     resultContainer.innerHTML = '';
+    
+    // Add authentication status message if authentication failed
+    if (isAuthenticated === false) {
+      const authWarning = document.createElement('div');
+      authWarning.className = 'error';
+      authWarning.innerHTML = '<strong>Authentication Failed</strong><br>The provided credentials were not accepted by the server. Some features may be limited.';
+      resultContainer.appendChild(authWarning);
+    }
+    
+    // Add message for auth=0 specific case
+    if (data.auth === 0) {
+      const authInfo = document.createElement('div');
+      authInfo.className = 'info';
+      authInfo.innerHTML = '<strong>Server Response</strong><br>The server returned limited information. This may be due to incorrect credentials or server configuration.';
+      resultContainer.appendChild(authInfo);
+    }
     
     // Format and display the data
     const fields = [
@@ -273,9 +317,9 @@ document.addEventListener('DOMContentLoaded', () => {
     resultContainer.innerHTML = '';
     
     // Clear content containers
-    liveChannelsList.innerHTML = '';
-    vodList.innerHTML = '';
-    seriesList.innerHTML = '';
+    liveChannelsContainer.innerHTML = '';
+    moviesContainer.innerHTML = '';
+    seriesContainer.innerHTML = '';
     
     // Switch to formatted tab when showing an error
     tabButtons.forEach(btn => btn.classList.remove('active'));
