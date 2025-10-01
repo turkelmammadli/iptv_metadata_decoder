@@ -33,6 +33,15 @@
               <input type="password" id="password" name="password" required>
             </div>
             
+            <div class="form-group">
+              <label for="m3u_url">M3U URL (optional):</label>
+              <div class="inline-input">
+                <input type="text" id="m3u_url" name="m3u_url" placeholder="http(s)://server/get.php?username=...&password=...">
+                <button type="button" id="parse-m3u-btn" class="secondary-btn"><i class="fas fa-link"></i> Fill from M3U</button>
+              </div>
+              <small class="help-text">Paste your M3U playlist link and we'll extract server, username and password.</small>
+            </div>
+            
             <button type="submit" id="decode-btn">
               <span class="btn-text">Decode</span>
               <span class="spinner hidden"><i class="fas fa-spinner fa-spin"></i></span>
@@ -106,17 +115,33 @@
                   </div>
                 </div>
               </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Video Player Modal -->
+    <div id="player-modal" class="modal hidden">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3 id="player-title">Stream Player</h3>
+          <button id="close-player" class="close-btn"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="modal-body">
+          <div id="player-container">
+            <video id="video-player" controls autoplay></video>
+            <div id="player-error" class="hidden">
+              <i class="fas fa-exclamation-circle"></i>
+              <p>Unable to play this stream. Please try another one.</p>
             </div>
           </div>
         </div>
       </div>
     </div>
-
+    
     <footer>
-      <p>&copy; 2025 IPTV Metadata Decoder</p>
+      <p>&copy; 2023 IPTV Metadata Decoder</p>
     </footer>
   </div>
 
   <script src="script.js"></script>
 </body>
-</html>

@@ -313,8 +313,8 @@ app.post('/api/streams', async (req, res) => {
   }
 });
 
-// Route to get series episodes
-app.post('/api/episodes', async (req, res) => {
+// Route to get series info and episodes
+app.post('/api/series-info', async (req, res) => {
   try {
     const { url, username, password, seriesId } = req.body;
     
@@ -339,17 +339,22 @@ app.post('/api/episodes', async (req, res) => {
     if (response.data && response.data.episodes) {
       // Add stream URLs to each episode
       const episodes = response.data.episodes;
+      const flatEpisodes = [];
+      
+      // Convert the nested episodes structure to a flat array with season information
       Object.keys(episodes).forEach(seasonKey => {
         episodes[seasonKey].forEach(episode => {
           const episodeId = episode.id;
           episode.stream_url = `${baseUrl}/series/${username}/${password}/${episodeId}.ts`;
+          episode.season = seasonKey;
+          flatEpisodes.push(episode);
         });
       });
       
       return res.json({
         success: true,
         info: response.data.info || {},
-        episodes: episodes
+        episodes: flatEpisodes
       });
     } else if (response.data && response.data.user_info && response.data.user_info.auth === 0) {
       return res.status(401).json({

@@ -8,6 +8,10 @@ document.addEventListener('DOMContentLoaded', () => {
   const resultContainer = document.getElementById('result-container');
   const errorMessage = document.getElementById('error-message');
   
+  // M3U elements
+  const m3uInput = document.getElementById('m3u_url');
+  const parseM3uBtn = document.getElementById('parse-m3u-btn');
+  
   // Tab navigation
   const tabButtons = document.querySelectorAll('.tab-btn');
   const tabPanes = document.querySelectorAll('.tab-pane');
@@ -24,6 +28,13 @@ document.addEventListener('DOMContentLoaded', () => {
   const seriesCategoriesList = document.querySelector('#series-categories .category-list');
   const seriesStreamsContainer = document.querySelector('#series-streams .content-items');
   const seriesStreamsMessage = document.querySelector('#series-streams .streams-message');
+  
+  // Video player elements
+  const playerModal = document.getElementById('player-modal');
+  const videoPlayer = document.getElementById('video-player');
+  const playerTitle = document.getElementById('player-title');
+  const closePlayerBtn = document.getElementById('close-player');
+  const playerError = document.getElementById('player-error');
   
   // Store credentials for reuse
   let currentCredentials = null;
@@ -54,11 +65,120 @@ document.addEventListener('DOMContentLoaded', () => {
     document.querySelector('.form-container').classList.remove('hidden');
     results.classList.add('hidden');
     backButton.classList.add('hidden');
-    // Reset form
-    form.reset();
   });
   results.insertBefore(backButton, results.firstChild);
   backButton.classList.add('hidden');
+  
+  // Player control functions
+  function openPlayer(streamUrl, title) {
+    playerTitle.textContent = title || 'Stream Player';
+    videoPlayer.src = streamUrl;
+    playerModal.classList.remove('hidden');
+    setTimeout(() => {
+      playerModal.classList.add('active');
+    }, 10);
+    
+    // Hide error message if it was shown previously
+    playerError.classList.add('hidden');
+    
+    // Handle video error
+    videoPlayer.onerror = () => {
+      playerError.classList.remove('hidden');
+      console.error('Error playing stream:', streamUrl);
+    };
+  }
+  
+  function closePlayer() {
+    playerModal.classList.remove('active');
+    setTimeout(() => {
+      playerModal.classList.add('hidden');
+      videoPlayer.pause();
+      videoPlayer.src = '';
+    }, 300);
+  }
+  
+  // Close player when clicking the close button
+  closePlayerBtn.addEventListener('click', closePlayer);
+  
+  // Close player when clicking outside the player content
+  playerModal.addEventListener('click', (e) => {
+    if (e.target === playerModal) {
+      closePlayer();
+    }
+  });
+  
+  // Close player when pressing Escape key
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !playerModal.classList.contains('hidden')) {
+      closePlayer();
+    }
+  });
+  
+  // Parse M3U URL and fill fields
+  if (parseM3uBtn) {
+    parseM3uBtn.addEventListener('click', () => {
+      const raw = (m3uInput?.value || '').trim();
+      if (!raw) {
+        showInlineError('Please paste an M3U URL to parse.');
+        return;
+      }
+      const parsed = parseM3UUrlSafe(raw);
+      if (!parsed) {
+        showInlineError('Could not parse M3U URL. Ensure it looks like http(s)://server/get.php?username=...&password=...');
+        return;
+      }
+      const urlEl = document.getElementById('url');
+      const userEl = document.getElementById('username');
+      const passEl = document.getElementById('password');
+      if (parsed.url) urlEl.value = parsed.url.replace(/\/$/, '');
+      if (parsed.username) userEl.value = parsed.username;
+      if (parsed.password) passEl.value = parsed.password;
+    });
+  }
+  
+  function showInlineError(msg) {
+    // Prefer showing near results section to keep UX consistent
+    errorMessage.textContent = msg;
+    errorMessage.classList.remove('hidden');
+  }
+  
+  function parseM3UUrlSafe(raw) {
+    try {
+      // Ensure URL has protocol for parsing
+      let candidate = raw;
+      if (!/^https?:\/\//i.test(candidate)) candidate = 'http://' + candidate;
+      const u = new URL(candidate);
+      const username = u.searchParams.get('username') || u.searchParams.get('user') || '';
+      const password = u.searchParams.get('password') || u.searchParams.get('pass') || '';
+      const base = u.origin; // protocol + host (+ port)
+      if (!username || !password) {
+        // Some providers embed creds in path e.g., /get.php?u=...&p=...
+        const u2 = u.searchParams.get('u');
+        const p2 = u.searchParams.get('p');
+        return {
+          url: base,
+          username: u2 || username,
+          password: p2 || password
+        };
+      }
+      return { url: base, username, password };
+    } catch (e) {
+      // Try to salvage basic query parsing without URL()
+      try {
+        const qIndex = raw.indexOf('?');
+        const basePart = qIndex >= 0 ? raw.slice(0, qIndex) : raw;
+        const query = qIndex >= 0 ? raw.slice(qIndex + 1) : '';
+        const params = new URLSearchParams(query);
+        const username = params.get('username') || params.get('user') || params.get('u') || '';
+        const password = params.get('password') || params.get('pass') || params.get('p') || '';
+        const base = /^https?:\/\//i.test(basePart) ? basePart : 'http://' + basePart;
+        if (!username || !password) return null;
+        return { url: base.replace(/\/$/, ''), username, password };
+      } catch {
+        return null;
+      }
+    }
+  }
   
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -75,9 +195,32 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     // Get form data
-    const url = document.getElementById('url').value.trim();
-    const username = document.getElementById('username').value.trim();
-    const password = document.getElementById('password').value.trim();
+    let url = document.getElementById('url').value.trim();
+    let username = document.getElementById('username').value.trim();
+    let password = document.getElementById('password').value.trim();
+    
+    // If M3U URL present and any creds missing, try to parse and fill
+    const m3uRaw = (m3uInput?.value || '').trim();
+    if (m3uRaw && (!url || !username || !password)) {
+      const parsed = parseM3UUrlSafe(m3uRaw);
+      if (parsed) {
+        url = url || parsed.url?.replace(/\/$/, '');
+        username = username || parsed.username;
+        password = password || parsed.password;
+        // Reflect in UI
+        if (url) document.getElementById('url').value = url;
+        if (username) document.getElementById('username').value = username;
+        if (password) document.getElementById('password').value = password;
+      }
+    }
+    
+    if (!url || !username || !password) {
+      showError('Please provide server URL, username, and password, or paste a valid M3U URL.');
+      // Reset button state
+      btnText.textContent = 'Decode';
+      spinner.classList.add('hidden');
+      return;
+    }
     
     try {
       const response = await fetch('/api/decode', {
@@ -306,8 +449,8 @@ document.addEventListener('DOMContentLoaded', () => {
           // For series, we need to fetch episodes
           showSeriesEpisodes(id);
         } else {
-          // For live and VOD, we can open the stream directly
-          window.open(url, '_blank');
+          // For live and VOD, open the stream in our player
+          openPlayer(url, title);
         }
       });
     }
@@ -360,10 +503,128 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   
   function showSeriesEpisodes(seriesId) {
-    // This would be implemented to show a modal with episodes
-    // For now, we'll just log it
-    console.log('Show episodes for series ID:', seriesId);
-    alert('Series episodes feature coming soon!');
+    if (!currentCredentials) return;
+    
+    const { url, username, password } = currentCredentials;
+    
+    // Show loading message
+    const loadingModal = document.createElement('div');
+    loadingModal.className = 'modal active';
+    loadingModal.innerHTML = `
+      <div class="modal-content" style="max-width: 400px;">
+        <div class="modal-header">
+          <h3>Loading Episodes</h3>
+        </div>
+        <div class="modal-body" style="padding: 20px; text-align: center;">
+          <i class="fas fa-spinner fa-spin" style="font-size: 24px; margin-bottom: 15px;"></i>
+          <p>Loading series information...</p>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(loadingModal);
+    
+    // Fetch series info
+    fetch('/api/series-info', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ url, username, password, seriesId })
+    })
+    .then(response => response.json())
+    .then(data => {
+      // Remove loading modal
+      document.body.removeChild(loadingModal);
+      
+      if (data.success && data.info && data.episodes) {
+        displaySeriesEpisodes(data.info, data.episodes);
+      } else {
+        alert('Unable to load series information. Please try again.');
+      }
+    })
+    .catch(error => {
+      console.error('Error fetching series info:', error);
+      document.body.removeChild(loadingModal);
+      alert('Error loading series information. Please try again.');
+    });
+  }
+  
+  function displaySeriesEpisodes(seriesInfo, episodes) {
+    // Create a modal to display episodes
+    const episodesModal = document.createElement('div');
+    episodesModal.className = 'modal active';
+    
+    // Group episodes by season
+    const seasons = {};
+    episodes.forEach(episode => {
+      const seasonNum = episode.season || '1';
+      if (!seasons[seasonNum]) {
+        seasons[seasonNum] = [];
+      }
+      seasons[seasonNum].push(episode);
+    });
+    
+    // Create modal content
+    let seasonsHtml = '';
+    Object.keys(seasons).sort((a, b) => parseInt(a) - parseInt(b)).forEach(season => {
+      seasonsHtml += `<h4>Season ${season}</h4><div class="episodes-grid">`;
+      
+      seasons[season].forEach(episode => {
+        seasonsHtml += `
+          <div class="episode-item" data-stream="${episode.stream_url || ''}" data-title="${seriesInfo.name} - S${season}E${episode.episode_num || '?'}">
+            <div class="episode-number">E${episode.episode_num || '?'}</div>
+            <div class="episode-title">${episode.title || `Episode ${episode.episode_num || '?'}`}</div>
+          </div>
+        `;
+      });
+      
+      seasonsHtml += '</div>';
+    });
+    
+    episodesModal.innerHTML = `
+      <div class="modal-content series-modal">
+        <div class="modal-header">
+          <h3>${seriesInfo.name}</h3>
+          <button class="close-btn"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="modal-body series-modal-body">
+          <div class="series-info">
+            ${seriesInfo.cover ? `<img src="${seriesInfo.cover}" alt="${seriesInfo.name}" class="series-cover">` : ''}
+            <div class="series-details">
+              ${seriesInfo.plot ? `<p class="series-plot">${seriesInfo.plot}</p>` : ''}
+              ${seriesInfo.cast ? `<p><strong>Cast:</strong> ${seriesInfo.cast}</p>` : ''}
+              ${seriesInfo.genre ? `<p><strong>Genre:</strong> ${seriesInfo.genre}</p>` : ''}
+              ${seriesInfo.rating ? `<p><strong>Rating:</strong> ${seriesInfo.rating}</p>` : ''}
+            </div>
+          </div>
+          <div class="series-episodes">
+            ${seasonsHtml || '<p>No episodes available</p>'}
+          </div>
+        </div>
+      </div>
+    `;
+    
+    document.body.appendChild(episodesModal);
+    
+    // Add close button functionality
+    const closeBtn = episodesModal.querySelector('.close-btn');
+    closeBtn.addEventListener('click', () => {
+      document.body.removeChild(episodesModal);
+    });
+    
+    // Add click event to episodes
+    const episodeItems = episodesModal.querySelectorAll('.episode-item');
+    episodeItems.forEach(item => {
+      const streamUrl = item.dataset.stream;
+      const title = item.dataset.title;
+      
+      if (streamUrl) {
+        item.addEventListener('click', () => {
+          document.body.removeChild(episodesModal);
+          openPlayer(streamUrl, title);
+        });
+      }
+    });
   }
   
   function displayResults(data, isAuthenticated) {
@@ -480,9 +741,9 @@ document.addEventListener('DOMContentLoaded', () => {
     resultContainer.innerHTML = '';
     
     // Clear content containers
-    liveChannelsContainer.innerHTML = '';
-    moviesContainer.innerHTML = '';
-    seriesContainer.innerHTML = '';
+    if (liveStreamsContainer) liveStreamsContainer.innerHTML = '';
+    if (vodStreamsContainer) vodStreamsContainer.innerHTML = '';
+    if (seriesStreamsContainer) seriesStreamsContainer.innerHTML = '';
     
     // Switch to formatted tab when showing an error
     tabButtons.forEach(btn => btn.classList.remove('active'));
